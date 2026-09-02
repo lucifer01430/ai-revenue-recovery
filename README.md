@@ -28,8 +28,9 @@ AI is a structured decision-making component inside a controlled workflow — no
 
 ## How It Works
 
-```
-DETECT → DIAGNOSE → DECIDE → GUARD → ACT → RECOVER → MEASURE → AUDIT
+```mermaid
+flowchart LR
+    DETECT --> DIAGNOSE --> DECIDE --> GUARD --> ACT --> RECOVER --> MEASURE --> AUDIT
 ```
 
 | Stage    | What happens |
@@ -80,35 +81,43 @@ This project is designed for the Razorpay AI Builder Internship / Buildathon 202
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────┐
-│                   Frontend                       │
-│           (HTML / CSS / JS / Bootstrap)          │
-└──────────────────────┬──────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────┐
-│               Django Backend                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
-│  │Detection │ │AI Engine │ │Guardrail / Policy│ │
-│  │  Layer   │ │          │ │     Engine       │ │
-│  └──────────┘ └────┬─────┘ └────────┬─────────┘ │
-│                    │                │            │
-│  ┌─────────────────▼────────────────▼──────────┐ │
-│  │           Action Executor                   │ │
-│  └──────────────────────────┬──────────────────┘ │
-│                             │                    │
-│  ┌──────────────────────────▼──────────────────┐ │
-│  │       Razorpay API (Test Mode)              │ │
-│  └─────────────────────────────────────────────┘ │
-│                                                  │
-│  ┌─────────────────────────────────────────────┐ │
-│  │      Audit Trail + Recovery Tracking        │ │
-│  └─────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────┐
-│              PostgreSQL Database                 │
-└─────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Frontend["Frontend (HTML / CSS / JS / Bootstrap)"]
+        UI[Recovery Dashboard]
+        Admin[Django Admin]
+    end
+
+    subgraph Backend["Django Backend"]
+        Detection[Detection Layer]
+        AIEngine[AI Decision Engine]
+        Guardrail[Guardrail / Policy Engine]
+        Executor[Action Executor]
+        Analytics[Analytics]
+        AuditSystem[Audit Trail]
+    end
+
+    subgraph External["External Services"]
+        Razorpay[Razorpay API (Test Mode)]
+        LLM[AI Provider (LLM-agnostic)]
+    end
+
+    DB[(PostgreSQL)]
+
+    UI --> Backend
+    Admin --> Backend
+    Backend --> DB
+
+    Detection -->|Detected| AIEngine
+    AIEngine -->|Recommendation| Guardrail
+    Guardrail -->|Approved Action| Executor
+    Executor -->|Execute| Razorpay
+    Executor -->|Log Outcome| AuditSystem
+    Razorpay -->|Status/Webhook| Detection
+    AIEngine -.->|LLM call| LLM
+
+    Analytics -.-> DB
+    AuditSystem -.-> DB
 ```
 
 **Critical principle:** AI recommends. The policy engine decides. The executor acts within pre-approved bounds only.
