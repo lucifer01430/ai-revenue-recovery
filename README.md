@@ -104,9 +104,8 @@ flowchart TD
 
     DB[(PostgreSQL)]
 
-    UI --> Backend
-    Admin --> Backend
-    Backend --> DB
+    UI -.-> Detection
+    Admin -.-> Analytics
 
     Detection -->|Detected| AIEngine
     AIEngine -->|Recommendation| Guardrail

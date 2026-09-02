@@ -41,9 +41,8 @@ flowchart TD
 
     DB[(PostgreSQL)]
 
-    UI --> Backend
-    Admin --> Backend
-    Backend --> DB
+    UI -.-> Detection
+    Admin -.-> Analytics
 
     Detection -->|Failed payment detected| AIEngine
     AIEngine -->|AI recommendation| Guardrail
