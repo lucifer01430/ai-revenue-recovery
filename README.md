@@ -98,8 +98,8 @@ flowchart TD
     end
 
     subgraph External["External Services"]
-        Razorpay[Razorpay API (Test Mode)]
-        LLM[AI Provider (LLM-agnostic)]
+        Razorpay["Razorpay API (Test Mode)"]
+        LLM["AI Provider (LLM-agnostic)"]
     end
 
     DB[(PostgreSQL)]
