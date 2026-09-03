@@ -34,6 +34,10 @@ DEBUG = env('DJANGO_DEBUG')
 
 ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=[])
 
+# Razorpay settings
+RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='rzp_test_placeholder')
+RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='placeholder_secret')
+RAZORPAY_WEBHOOK_SECRET = env('RAZORPAY_WEBHOOK_SECRET', default='placeholder_webhook_secret')
 
 # Application definition
 
@@ -49,6 +53,10 @@ INSTALLED_APPS = [
     'apps.merchants',
     'apps.customers',
     'apps.payments',
+    'apps.recovery',
+    'apps.audit',
+    'apps.ai_engine',
+    'apps.guardrails',
 ]
 
 MIDDLEWARE = [

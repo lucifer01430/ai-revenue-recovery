@@ -1,0 +1,129 @@
+{% extends 'recovery/base.html' %}
+
+{% block page_title %}Case Details <span class="text-muted fs-5 fw-normal">#{{ case.id|stringformat:"s"|slice:":8" }}</span>{% endblock %}
+
+{% block head %}
+<style>
+    .timeline { position: relative; padding: 20px 0; margin-top: 20px; }
+    .timeline::before {
+        content: ''; position: absolute; top: 0; left: 30px; height: 100%; width: 2px; background: #e4e6ef;
+    }
+    .timeline-item { position: relative; margin-bottom: 25px; padding-left: 70px; }
+    .timeline-icon {
+        position: absolute; left: 16px; top: 0; width: 30px; height: 30px; border-radius: 50%;
+        background: #fff; border: 2px solid #50cd89; display: flex; align-items: center; justify-content: center;
+        z-index: 1; font-size: 14px;
+    }
+    .timeline-content {
+        background: #f8f9fa; padding: 15px 20px; border-radius: 8px; border: 1px solid #f1f1f4;
+    }
+    .timeline-item.CASE_CREATED .timeline-icon { border-color: #ffc700; color: #ffc700; }
+    .timeline-item.AI_DIAGNOSED .timeline-icon { border-color: #7239ea; color: #7239ea; }
+    .timeline-item.GUARDRAIL_EVALUATED .timeline-icon { border-color: #3e97ff; color: #3e97ff; }
+    .timeline-item.ACTION_EXECUTED .timeline-icon { border-color: #50cd89; color: #50cd89; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Case Summary Info -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                Payment Info
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase">Customer</label>
+                    <div class="fw-bold fs-5">{{ case.payment.customer.name|default:"Unknown" }}</div>
+                    <div class="text-muted">{{ case.payment.customer.email }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase">Amount</label>
+                    <div class="fw-bold fs-5 text-dark">₹{% widthratio case.payment.amount_paise 100 1 %}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase">Razorpay ID</label>
+                    <div><code>{{ case.payment.razorpay_payment_id }}</code></div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase">Failure Reason</label>
+                    <div class="text-danger fw-medium">{{ case.payment.description }}</div>
+                </div>
+                <div>
+                    <label class="text-muted small fw-bold text-uppercase">Current Status</label>
+                    <div>
+                        {% if case.status == 'OPEN' or case.status == 'DIAGNOSING' or case.status == 'ACTION_PENDING' %}
+                            <span class="badge badge-soft-warning fs-6">{{ case.status }}</span>
+                        {% elif case.status == 'RECOVERED' %}
+                            <span class="badge badge-soft-success fs-6">{{ case.status }}</span>
+                        {% elif case.status == 'CLOSED' %}
+                            <span class="badge badge-soft-info fs-6">{{ case.status }}</span>
+                        {% else %}
+                            <span class="badge badge-soft-danger fs-6">{{ case.status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                AI Engine
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small fw-bold text-uppercase">Diagnosis</label>
+                    <div class="p-3 bg-light rounded mt-1 fst-italic border">{{ case.latest_diagnosis|default:"Pending" }}</div>
+                </div>
+                <div>
+                    <label class="text-muted small fw-bold text-uppercase">Recommendation</label>
+                    <div>
+                        <span class="badge bg-secondary fs-6 mt-1">{{ case.latest_recommendation|upper|default:"PENDING" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline / Workflow -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Recovery Workflow & Audit Trail</span>
+                <span class="badge badge-soft-primary">Retries: {{ case.retries_attempted }}</span>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for log in audit_logs %}
+                    <div class="timeline-item {{ log.event_type }}">
+                        <div class="timeline-icon">
+                            {% if log.event_type == 'CASE_CREATED' %}<i class="bi bi-box-arrow-in-right"></i>
+                            {% elif log.event_type == 'AI_DIAGNOSED' %}<i class="bi bi-robot"></i>
+                            {% elif log.event_type == 'GUARDRAIL_EVALUATED' %}<i class="bi bi-shield-check"></i>
+                            {% elif log.event_type == 'ACTION_EXECUTED' %}<i class="bi bi-lightning-charge"></i>
+                            {% else %}<i class="bi bi-record-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content shadow-sm">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold">{{ log.event_type }}</span>
+                                <span class="text-muted small">{{ log.created_at|date:"M d, Y H:i:s" }}</span>
+                            </div>
+                            <p class="mb-0 text-dark">{{ log.description }}</p>
+                            
+                            {% if log.metadata %}
+                            <div class="mt-2 bg-white p-2 rounded border small font-monospace text-muted overflow-auto">
+                                {{ log.metadata|pprint }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">No audit logs found.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends 'recovery/base.html' %}
+
+{% block page_title %}Overview{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Stat Cards -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Revenue at Risk</div>
+                <div class="stat-value text-danger mt-2">₹{{ revenue_at_risk|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Revenue Recovered</div>
+                <div class="stat-value text-success mt-2">₹{{ revenue_recovered|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Recovery Rate</div>
+                <div class="stat-value text-primary mt-2">{{ recovery_rate }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-label">Payments Analyzed</div>
+                <div class="stat-value mt-2">{{ total_cases }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Pipeline Metrics -->
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-arrow-repeat fs-1 text-warning mb-2"></i>
+                <h5 class="fw-bold">{{ open_cases }}</h5>
+                <div class="text-muted small text-uppercase fw-bold">Unresolved</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
+                <h5 class="fw-bold">{{ recovered_cases }}</h5>
+                <div class="text-muted small text-uppercase fw-bold">Successful</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-person-up fs-1 text-info mb-2"></i>
+                <h5 class="fw-bold">{{ closed_cases }}</h5>
+                <div class="text-muted small text-uppercase fw-bold">Escalated / Stopped</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-x-circle fs-1 text-danger mb-2"></i>
+                <h5 class="fw-bold">{{ failed_cases }}</h5>
+                <div class="text-muted small text-uppercase fw-bold">Failed to Recover</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Cases -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="m-0 fw-bold">Recent Recovery Cases</h5>
+        <a href="{% url 'recovery:case_list' %}" class="btn btn-sm btn-light">View All</a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in recent_cases %}
+                    <tr>
+                        <td><code>{{ case.id|stringformat:"s"|slice:":8" }}</code></td>
+                        <td>
+                            <div class="fw-bold">{{ case.payment.customer.name|default:"Unknown" }}</div>
+                            <div class="small text-muted">{{ case.payment.customer.email }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold">₹{% widthratio case.payment.amount_paise 100 1 %}</div>
+                        </td>
+                        <td>
+                            {% if case.status == 'OPEN' or case.status == 'DIAGNOSING' or case.status == 'ACTION_PENDING' %}
+                                <span class="badge badge-soft-warning px-2 py-1 rounded">{{ case.status }}</span>
+                            {% elif case.status == 'RECOVERED' %}
+                                <span class="badge badge-soft-success px-2 py-1 rounded">{{ case.status }}</span>
+                            {% elif case.status == 'CLOSED' %}
+                                <span class="badge badge-soft-info px-2 py-1 rounded">{{ case.status }}</span>
+                            {% else %}
+                                <span class="badge badge-soft-danger px-2 py-1 rounded">{{ case.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ case.created_at|date:"M d, Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'recovery:case_detail' case.id %}" class="btn btn-sm btn-light-primary">Details</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No cases found. Run the test command to generate data.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

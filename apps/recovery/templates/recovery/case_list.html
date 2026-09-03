@@ -1,0 +1,75 @@
+{% extends 'recovery/base.html' %}
+
+{% block page_title %}Recovery Cases{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header border-0 pt-4">
+        <h5 class="fw-bold mb-0">All Cases</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Customer / Payment</th>
+                        <th>Amount</th>
+                        <th>Failure Reason</th>
+                        <th>AI Recommendation</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in cases %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ case.payment.customer.name|default:"Unknown" }}</div>
+                            <div class="small text-muted">{{ case.payment.razorpay_payment_id }}</div>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">₹{% widthratio case.payment.amount_paise 100 1 %}</div>
+                        </td>
+                        <td>
+                            <span class="text-muted small">{{ case.payment.description|default:"Unknown"|truncatechars:40 }}</span>
+                        </td>
+                        <td>
+                            {% if case.latest_recommendation %}
+                                <span class="badge bg-light text-dark border">{{ case.latest_recommendation|upper }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if case.status == 'OPEN' or case.status == 'DIAGNOSING' or case.status == 'ACTION_PENDING' %}
+                                <span class="badge badge-soft-warning">{{ case.status }}</span>
+                            {% elif case.status == 'RECOVERED' %}
+                                <span class="badge badge-soft-success">{{ case.status }}</span>
+                            {% elif case.status == 'CLOSED' %}
+                                <span class="badge badge-soft-info">{{ case.status }}</span>
+                            {% else %}
+                                <span class="badge badge-soft-danger">{{ case.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-muted small">{{ case.created_at|date:"M d, H:i" }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'recovery:case_detail' case.id %}" class="btn btn-sm btn-outline-secondary">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-3"></i>
+                            No recovery cases found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

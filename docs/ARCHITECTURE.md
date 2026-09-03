@@ -1,260 +1,48 @@
-# Architecture — AI Revenue Recovery Platform
-
----
+# System Architecture
 
 ## Overview
-
-The system is a Django monolith with clearly separated internal modules. Each module has a defined responsibility. The architecture avoids microservices at this stage while remaining modular enough to extract components later if needed.
-
-The most important architectural principle is the separation between:
-
-- **AI Decision Engine** — recommends what to do
-- **Guardrail / Policy Engine** — validates whether it is allowed
-- **Action Executor** — performs only what is authorised
-
-These three layers must never be collapsed. The AI engine must not directly trigger actions. The executor must not act without guardrail approval.
-
----
+The AI Revenue Recovery Platform is a B2B SaaS system designed to detect, diagnose, and recover failed payments. It is built as a monolithic web application using Django, integrating with a PostgreSQL database and an AI provider for intelligent decision-making, bounded by a strict deterministic guardrail system. 
 
 ## High-Level Architecture
 
-```mermaid
-flowchart TD
-    subgraph Frontend["Frontend (HTML / CSS / JS / Bootstrap)"]
-        UI[Recovery Dashboard]
-        Admin[Django Admin + Jazzmin]
-    end
+The system consists of the following major components:
+- **Web Layer**: Django (WSGI/ASGI), handling HTTP requests, admin interfaces, and webhooks.
+- **Application Layer (Django Apps)**: Business logic divided into focused modules.
+- **Data Layer**: PostgreSQL database for persistent storage and audit logging.
+- **External Integrations**:
+  - **Razorpay**: For payment gateway integration (Test Mode for MVP).
+  - **LLM Provider**: For AI diagnosis and recovery recommendations (provider-agnostic).
 
-    subgraph Backend["Django Backend"]
-        Detection[Detection Layer\napps/payments]
-        AIEngine[AI Decision Engine\napps/ai_engine]
-        Guardrail[Guardrail / Policy Engine\napps/guardrails]
-        Executor[Action Executor\napps/recovery]
-        Analytics[Analytics\napps/analytics]
-        AuditSystem[Audit Trail\napps/audit]
-    end
+## Django App/Module Responsibilities
 
-    subgraph External["External Services"]
-        Razorpay[Razorpay API\nTest Mode]
-        LLM[AI Provider\nLLM-agnostic]
-    end
+To maintain separation of concerns, the project is divided into the following Django apps:
 
-    DB[(PostgreSQL)]
+1. **`core`**: Base models, common utilities, and system-wide configurations.
+2. **`payments`**: Handles synchronization and integration with Razorpay. Manages the ingress of failed payments and webhooks.
+3. **`recovery`**: The central orchestrator. Manages the lifecycle of a recovery case (Detect, Diagnose, Decide, Guard, Act, Recover).
+4. **`intelligence`**: Encapsulates the AI prompt management, communication with the LLM, and parsing of AI responses.
+5. **`guardrails`**: Deterministic rule engine. Validates AI recommendations against business rules (e.g., max retries, blackout windows).
+6. **`audit`**: Immutable logging of all state changes, AI decisions, guardrail interventions, and recovery outcomes.
 
-    UI -.-> Detection
-    Admin -.-> Analytics
+## Razorpay Integration Boundary
 
-    Detection -->|Failed payment detected| AIEngine
-    AIEngine -->|AI recommendation| Guardrail
-    Guardrail -->|Approved action| Executor
-    Executor -->|Execute payment action| Razorpay
-    Executor -->|Log outcome| AuditSystem
-    Razorpay -->|Payment status / webhook| Detection
-    AIEngine -->|LLM call| LLM
+The Razorpay integration acts as the sole entry point for payment events and the sole execution point for money-related actions.
+- **Ingress**: Razorpay webhooks (e.g., `payment.failed`, `subscription.charged`) are ingested by the `payments` app and translated into internal representations.
+- **Egress**: Bounded recovery actions (e.g., retrying a charge, generating a payment link) are converted from internal representations into Razorpay API calls.
+- **Boundary Rule**: The AI never communicates directly with Razorpay. The `recovery` app translates approved actions into gateway commands.
 
-    Analytics --> DB
-    AuditSystem --> DB
-```
+## Evaluation Architecture
 
----
+The evaluation architecture is designed to validate the system's performance and safety without relying on live production traffic:
+1. **Synthetic Dataset**: A fixture of 100-500 simulated failed payment records covering various edge cases (insufficient funds, expired card, blocked by issuer).
+2. **Simulation Runner**: A script that injects synthetic records into the `payments` ingress pipeline.
+3. **Evaluation Metrics**: Compares AI recommendations against expected baseline behaviors, tracks guardrail intervention rates, and measures simulated recovery success.
+4. **Safety Assertions**: Automated tests ensure the AI cannot bypass guardrails (e.g., proposing an action that violates retry limits).
 
-## Component Responsibilities
+## Path to Multi-Tenant SaaS
 
-### Frontend
-
-**Technology:** HTML, CSS, JavaScript, Bootstrap
-
-- Renders recovery case lists and case detail views
-- Displays recovery analytics and metrics
-- Provides basic case management UI
-- Read-mostly: most workflow steps are backend-driven
-- Django Admin (with Jazzmin) used for internal data management during development
-
----
-
-### Django Backend
-
-The backend is structured as a Django monolith with distinct internal applications (Django apps). Each app owns a specific domain.
-
-#### `apps/accounts`
-User authentication, session management, and role-based access. Merchants log in here.
-
-#### `apps/merchants`
-Merchant profiles, settings, and recovery policy configuration. Each merchant can have custom guardrail parameters within platform defaults.
-
-#### `apps/customers`
-Customer records associated with each merchant. Includes payment history signals used in diagnosis.
-
-#### `apps/payments`
-Payment records, subscription records, and failure events. This is the entry point for the recovery workflow. The detection layer lives here.
-
-#### `apps/recovery`
-Recovery cases, AI decisions, recovery actions, and recovery results. The core workflow state machine lives here.
-
-#### `apps/ai_engine`
-The AI diagnosis and recommendation layer. Constructs structured prompts, calls the configured LLM provider, parses and validates AI responses. Does not directly execute any actions.
-
-#### `apps/guardrails`
-The deterministic policy engine. Validates every AI recommendation against merchant-level and platform-level recovery policies. Acts as the authorization gate before any action is executed.
-
-#### `apps/analytics`
-Aggregate recovery metrics: revenue at risk, revenue recovered, recovery rate, intervention distribution. All metrics are computed from actual records.
-
-#### `apps/audit`
-Immutable audit log. Records every decision, action, and outcome with timestamps, actor identity, and relevant context.
-
----
-
-### PostgreSQL Database
-
-The primary data store for all application data. Key tables correspond to the entities described in [`DATA_MODEL.md`](DATA_MODEL.md). No caching layer is introduced at MVP stage.
-
----
-
-### AI Decision Engine
-
-The AI engine is **LLM-agnostic**. The provider (OpenAI, Anthropic, Google, etc.) is configured via environment variables and can be swapped without changing the core recovery workflow.
-
-The engine:
-- Accepts a structured input payload describing the payment failure context
-- Returns a structured JSON response: recommended action, confidence, reasoning summary
-- Does **not** execute actions
-- Does **not** access the database directly during inference
-- Fails gracefully: if the LLM call fails or returns an unparseable response, the system falls back to a safe configurable default
-
-See [`AI_DECISION_ENGINE.md`](AI_DECISION_ENGINE.md) for full specification.
-
----
-
-### Guardrail / Policy Engine
-
-A fully deterministic layer that runs after every AI recommendation and before every action execution.
-
-The policy engine:
-- Checks retry limits per payment/subscription
-- Checks recovery window expiry
-- Prevents duplicate actions on the same case in the same time window
-- Enforces amount thresholds
-- Routes high-value or repeated-failure cases to human escalation
-- Enforces stopping rules
-- Returns an authorization decision: APPROVED, REJECTED, or ESCALATED
-
-The AI engine cannot override the policy engine. Ever.
-
-See [`GUARDRAILS.md`](GUARDRAILS.md) for the full policy specification.
-
----
-
-### Action Executor
-
-Executes only policy-approved actions. Current bounded action types:
-
-| Action | Description |
-|--------|-------------|
-| `RETRY_PAYMENT` | Trigger a payment retry via Razorpay API |
-| `SEND_PAYMENT_LINK` | Generate and send a Razorpay payment link |
-| `SEND_REMINDER` | Send a payment reminder notification |
-| `SCHEDULE_RETRY` | Schedule a retry at a future time |
-| `ESCALATE_TO_HUMAN` | Flag the case for manual review |
-| `STOP_RECOVERY` | Mark the case as stopped; cease further attempts |
-
-Actions are **idempotent**: executing the same action twice on the same case produces the same result without duplicating external calls.
-
----
-
-### Razorpay Integration
-
-Razorpay is used exclusively in Test Mode during development and evaluation.
-
-Integration points:
-- Fetch payment and subscription records
-- Retrieve payment failure details
-- Trigger payment retries (where supported by API)
-- Generate payment links
-- Receive payment status webhooks
-
-See [`RAZORPAY_INTEGRATION.md`](RAZORPAY_INTEGRATION.md) for the full integration plan.
-
----
-
-### Recovery Result Tracking
-
-After an action is executed, the system polls or receives a webhook to determine the outcome:
-
-- **RECOVERED** — payment succeeded after intervention
-- **FAILED** — payment failed again despite intervention
-- **PENDING** — outcome not yet known
-- **ESCALATED** — case handed to a human operator
-- **STOPPED** — recovery ceased per stopping rules
-
----
-
-### Audit System
-
-Every step in the workflow is recorded:
-
-- What was detected, when, and from what source
-- What the AI diagnosed and recommended
-- What the policy engine decided and why
-- What action was executed, when, and by what actor
-- What the result was
-- Any errors or fallback decisions
-
-The audit log is append-only. No audit record is modified after creation.
-
----
-
-## Data Flow Summary
-
-```
-Payment failure event
-        │
-        ▼
-Detection Layer (apps/payments)
-  Creates PaymentFailure record
-  Creates RecoveryCase record
-        │
-        ▼
-AI Decision Engine (apps/ai_engine)
-  Constructs structured prompt from case context
-  Calls LLM provider
-  Parses and validates structured response
-  Stores AIAnalysis record
-        │
-        ▼
-Guardrail / Policy Engine (apps/guardrails)
-  Validates AI recommendation against policies
-  Returns: APPROVED | REJECTED | ESCALATED
-  Stores RecoveryDecision record
-        │
-     [APPROVED]
-        │
-        ▼
-Action Executor (apps/recovery)
-  Executes bounded action via Razorpay or notification
-  Stores RecoveryAction record
-        │
-        ▼
-Recovery Result Tracker
-  Receives payment outcome (webhook or poll)
-  Stores RecoveryResult record
-        │
-        ▼
-Analytics (apps/analytics)
-  Aggregates metrics from actual records
-        │
-        ▼
-Audit Trail (apps/audit)
-  Append-only log of all steps above
-```
-
----
-
-## Architectural Constraints
-
-1. AI must not directly trigger Razorpay API calls.
-2. The executor must not run without a guardrail-issued authorization.
-3. All actions must be idempotent.
-4. The AI provider is replaceable via configuration — the core workflow does not depend on a specific LLM.
-5. No microservices at MVP stage.
-6. PostgreSQL is the single source of truth — no external state.
+While the MVP is focused on a single-tenant or limited multi-tenant model, the architecture is designed to evolve into a full multi-tenant SaaS:
+1. **Tenant Isolation**: Future iterations will introduce a `Merchant` or `Organization` model. All core data models (Payments, Recovery Cases, Audit Logs) will have a foreign key to the `Tenant`.
+2. **Custom Guardrails**: The `guardrails` app will be extended to allow tenant-specific rules (e.g., Tenant A allows 3 retries, Tenant B allows 5).
+3. **Data Segregation**: Row-level security (RLS) in PostgreSQL can be implemented to enforce strict data isolation between tenants.
+4. **API-First Egress**: The monolithic admin dashboard will evolve into a set of REST APIs for tenant-facing dashboards and webhooks for tenant systems.
