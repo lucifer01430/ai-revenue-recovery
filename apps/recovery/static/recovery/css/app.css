@@ -1,0 +1,430 @@
+/* Shared visual language for the merchant dashboard and Jazzmin admin. */
+:root {
+  --rr-ink: #102a43;
+  --rr-ink-muted: #627d98;
+  --rr-navy: #0b1f33;
+  --rr-blue: #1769e0;
+  --rr-blue-soft: #eaf2ff;
+  --rr-teal: #0f9d8b;
+  --rr-teal-soft: #e6f7f4;
+  --rr-amber: #b7791f;
+  --rr-amber-soft: #fff6df;
+  --rr-red: #c53030;
+  --rr-red-soft: #fff0f0;
+  --rr-border: #d9e2ec;
+  --rr-canvas: #f5f8fb;
+  --rr-shadow: 0 10px 30px rgba(16, 42, 67, 0.06);
+  --rr-radius: 14px;
+}
+body {
+  background: var(--rr-canvas);
+  color: var(--rr-ink);
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  letter-spacing: -0.01em;
+}
+.app-shell {
+  min-height: 100vh;
+}
+.sidebar {
+  width: 248px;
+  min-height: 100vh;
+  background: var(--rr-navy);
+  color: #d9e2ec;
+}
+.sidebar-brand {
+  padding: 24px 22px;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-right: 9px;
+  border-radius: 9px;
+  color: #fff;
+  background: var(--rr-blue);
+  box-shadow: 0 5px 14px rgba(23, 105, 224, 0.35);
+}
+.sidebar-section-label {
+  padding: 22px 22px 8px;
+  color: #829ab1;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.sidebar .nav-link {
+  margin: 3px 12px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  color: #a9bfd3;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.sidebar .nav-link i {
+  width: 23px;
+  color: #7590a9;
+}
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.sidebar .nav-link.active {
+  box-shadow: inset 3px 0 0 var(--rr-blue);
+}
+.sidebar .nav-link.active i {
+  color: #8eb9ff;
+}
+.sidebar-footer {
+  padding: 18px 22px;
+  color: #829ab1;
+  font-size: 0.76rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.app-main {
+  min-width: 0;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+.topbar {
+  min-height: 78px;
+  padding: 16px 34px;
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--rr-border);
+}
+.page-heading {
+  color: var(--rr-ink);
+  font-size: 1.3rem;
+  font-weight: 750;
+}
+.page-eyebrow {
+  color: var(--rr-ink-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.content-wrap {
+  padding: 30px 34px 44px;
+}
+.card {
+  border: 1px solid var(--rr-border);
+  border-radius: var(--rr-radius);
+  background: #fff;
+  box-shadow: var(--rr-shadow);
+}
+.card {
+  margin-bottom: 20px;
+}
+.card-header {
+  padding: 19px 22px;
+  background: #fff;
+  border-bottom: 1px solid var(--rr-border);
+  border-radius: var(--rr-radius) var(--rr-radius) 0 0 !important;
+}
+.card-body {
+  padding: 22px;
+}
+.section-title {
+  margin: 0;
+  color: var(--rr-ink);
+  font-size: 1rem;
+  font-weight: 750;
+}
+.section-caption {
+  margin: 4px 0 0;
+  color: var(--rr-ink-muted);
+  font-size: 0.82rem;
+}
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(16, 42, 67, 0.1);
+}
+.stat-card::after {
+  position: absolute;
+  right: -25px;
+  bottom: -38px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--rr-blue-soft);
+  content: "";
+}
+.stat-icon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--rr-blue);
+  background: var(--rr-blue-soft);
+}
+.stat-label {
+  color: var(--rr-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.stat-value {
+  color: var(--rr-ink);
+  font-size: 1.8rem;
+  font-weight: 780;
+  letter-spacing: -0.04em;
+}
+.metric-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.metric-strip i {
+  font-size: 1.2rem;
+}
+.metric-strip-value {
+  color: var(--rr-ink);
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+.metric-strip-label {
+  color: var(--rr-ink-muted);
+  font-size: 0.78rem;
+}
+.table {
+  margin: 0;
+}
+.table > :not(caption) > * > * {
+  padding: 15px 18px;
+  border-bottom-color: var(--rr-border);
+}
+.table thead th {
+  color: var(--rr-ink-muted);
+  background: #fbfcfe;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.table tbody td {
+  color: var(--rr-ink);
+  font-size: 0.86rem;
+  vertical-align: middle;
+}
+.table-hover tbody tr:hover {
+  background: #f7faff;
+}
+.table a {
+  color: var(--rr-blue);
+  text-decoration: none;
+  font-weight: 700;
+}
+.case-id {
+  color: var(--rr-ink-muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.76rem;
+}
+.badge {
+  padding: 6px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+.badge-soft-success {
+  color: #087f6e;
+  background: var(--rr-teal-soft);
+}
+.badge-soft-danger {
+  color: var(--rr-red);
+  background: var(--rr-red-soft);
+}
+.badge-soft-warning {
+  color: var(--rr-amber);
+  background: var(--rr-amber-soft);
+}
+.badge-soft-info,
+.badge-soft-primary {
+  color: var(--rr-blue);
+  background: var(--rr-blue-soft);
+}
+.btn {
+  border-radius: 8px;
+  font-weight: 700;
+}
+.btn-primary {
+  background: var(--rr-blue);
+  border-color: var(--rr-blue);
+}
+.btn-light,
+.btn-light-primary {
+  color: var(--rr-blue);
+  background: var(--rr-blue-soft);
+  border-color: transparent;
+}
+.btn-outline-secondary {
+  color: var(--rr-ink-muted);
+  border-color: var(--rr-border);
+}
+.empty-state {
+  padding: 52px 20px;
+  color: var(--rr-ink-muted);
+  text-align: center;
+}
+.empty-state i {
+  display: block;
+  margin-bottom: 12px;
+  color: #9fb3c8;
+  font-size: 2.1rem;
+}
+.detail-label {
+  color: var(--rr-ink-muted);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.detail-value {
+  color: var(--rr-ink);
+  font-weight: 650;
+}
+.timeline::before {
+  background: var(--rr-border);
+}
+.timeline-content {
+  background: #fbfcfe;
+  border: 1px solid var(--rr-border);
+}
+.timeline-icon {
+  border-color: var(--rr-blue);
+  color: var(--rr-blue);
+}
+.workflow-callout {
+  padding: 14px 16px;
+  border: 1px solid #cfe0fa;
+  border-radius: 10px;
+  background: var(--rr-blue-soft);
+  color: #174a8b;
+  font-size: 0.84rem;
+}
+code {
+  color: #486581;
+}
+/* Jazzmin admin alignment */
+.main-sidebar,
+.main-sidebar::before {
+  background: var(--rr-navy);
+}
+.brand-link {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.nav-sidebar .nav-link.active {
+  background: rgba(23, 105, 224, 0.25) !important;
+  box-shadow: inset 3px 0 0 #65a2ff;
+}
+body.layout-fixed,
+body.layout-navbar-fixed {
+  background: var(--rr-canvas);
+}
+.main-header {
+  background: #fff;
+  border-bottom: 1px solid var(--rr-border);
+}
+.content-wrapper,
+.main-footer {
+  background: var(--rr-canvas);
+}
+.content-header h1 {
+  color: var(--rr-ink);
+  font-weight: 750;
+}
+.content-header .breadcrumb,
+.content-header .breadcrumb a {
+  color: var(--rr-ink-muted);
+}
+.card-title,
+.card-header,
+.card-body,
+.info-box-text,
+.small-box h3 {
+  color: var(--rr-ink);
+}
+.card-header {
+  background: #fff;
+}
+.small-box,
+.info-box {
+  border-color: var(--rr-border);
+  box-shadow: var(--rr-shadow);
+}
+.index .addlink,
+.index .changelink {
+  border-radius: 8px;
+  font-weight: 700;
+}
+.index .addlink {
+  background: var(--rr-blue);
+  border-color: var(--rr-blue);
+  color: #fff;
+}
+.index .changelink {
+  color: var(--rr-blue);
+  background: var(--rr-blue-soft);
+  border-color: #cfe0fa;
+}
+.index .addlink:hover,
+.index .changelink:hover {
+  filter: brightness(0.96);
+}
+@media (max-width: 900px) {
+  .sidebar {
+    width: 76px;
+  }
+  .sidebar-brand {
+    padding: 20px 0;
+    text-align: center;
+    font-size: 0;
+  }
+  .sidebar-brand .brand-mark {
+    margin: 0;
+  }
+  .sidebar-section-label,
+  .sidebar .nav-link span,
+  .sidebar-footer {
+    display: none;
+  }
+  .sidebar .nav-link {
+    margin: 4px 10px;
+    text-align: center;
+  }
+  .sidebar .nav-link i {
+    width: auto;
+  }
+  .topbar,
+  .content-wrap {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}

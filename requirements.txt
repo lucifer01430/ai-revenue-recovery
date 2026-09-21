@@ -1,8 +1,9 @@
-Django>=5.0,<6.2
-django-environ>=0.11.2
-psycopg2-binary>=2.9.9
-
-# AI Providers (Uncomment the one you use for actual implementation)
-# openai>=1.13.0
-# anthropic>=0.19.0
-# google-genai>=1.0.0
+asgiref==3.12.1
+cffi==2.1.1
+cryptography==50.0.1
+Django==6.1.1
+django-environ==0.14.0
+django-jazzmin==3.0.5
+psycopg2-binary==2.9.13
+pycparser==3.0
+sqlparse==0.6.0
