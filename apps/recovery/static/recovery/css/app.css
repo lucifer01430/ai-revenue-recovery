@@ -398,6 +398,29 @@ body.layout-navbar-fixed {
 .index .changelink:hover {
   filter: brightness(0.96);
 }
+.index .addlink::before,
+.index .changelink::before {
+  content: none !important;
+}
+.addlink {
+  display: inline-block !important;
+  min-width: 52px;
+  width: auto !important;
+  padding: .375rem .75rem !important;
+  color: #fff !important;
+  font-size: 0 !important;
+  line-height: 1.5 !important;
+  text-indent: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.addlink::after {
+  content: 'Add';
+  display: inline-block;
+  color: #fff !important;
+  font-size: .8rem !important;
+  font-weight: 700;
+}
 @media (max-width: 900px) {
   .sidebar {
     width: 76px;
