@@ -212,12 +212,65 @@ def _record_result(case, recovery_action, status, recovered_amount_paise=None):
         status=status,
         recovered_amount_paise=recovered_amount_paise,
     )
-    if result.status == ResultChoices.RECOVERED:
-        case.status = "RECOVERED"
-    elif result.status in {ResultChoices.ESCALATED, ResultChoices.STOPPED}:
-        case.status = "CLOSED"
-    case.save(update_fields=['status', 'updated_at'])
+    _apply_outcome_state(case, result)
     return result
+
+
+def record_recovery_outcome(recovery_action, status, recovered_amount_paise=None, source='SIMULATION'):
+    """Record a confirmed outcome once; pending outcomes may be completed later."""
+    if recovery_action.authorization_status != AuthorizationChoices.APPROVED:
+        return recovery_action.result if hasattr(recovery_action, 'result') else None, False
+    if recovery_action.execution_status != ExecutionChoices.EXECUTED:
+        return recovery_action.result if hasattr(recovery_action, 'result') else None, False
+    if status not in ResultChoices.values:
+        raise ValueError(f'Unsupported recovery outcome: {status}')
+
+    with transaction.atomic():
+        result = RecoveryResult.objects.select_for_update().filter(recovery_action=recovery_action).first()
+        if result and result.status != ResultChoices.PENDING_RESULT:
+            return result, False
+        if result is None:
+            result = RecoveryResult.objects.create(
+                recovery_case=recovery_action.recovery_case,
+                recovery_action=recovery_action,
+                status=status,
+                recovered_amount_paise=recovered_amount_paise,
+            )
+        else:
+            result.status = status
+            result.recovered_amount_paise = recovered_amount_paise
+            result.save(update_fields=['status', 'recovered_amount_paise', 'updated_at'])
+        _apply_outcome_state(recovery_action.recovery_case, result)
+        AuditLog.objects.create(
+            recovery_case_id=recovery_action.recovery_case_id,
+            event_type='RECOVERY_OUTCOME_RECORDED',
+            description=f'Recovery outcome {status} recorded from {source}.',
+            metadata={'status': status, 'recovered_amount_paise': recovered_amount_paise, 'source': source},
+        )
+        return result, True
+
+
+def _apply_outcome_state(case, result):
+    """Keep payment and case state aligned with the persisted outcome."""
+    if result.status == ResultChoices.RECOVERED:
+        case.status = 'RECOVERED'
+        case.payment.status = 'captured'
+    elif result.status == ResultChoices.FAILED:
+        case.status = 'FAILED'
+        case.payment.status = 'failed'
+    elif result.status in {ResultChoices.ESCALATED, ResultChoices.STOPPED}:
+        case.status = 'CLOSED'
+        case.payment.status = 'failed'
+    elif result.status == ResultChoices.PENDING_RESULT:
+        case.status = 'ACTION_PENDING'
+    case.payment.save(update_fields=['status', 'updated_at'])
+    case.save(update_fields=['status', 'updated_at'])
+    AuditLog.objects.create(
+        recovery_case_id=case.id,
+        event_type='PAYMENT_OUTCOME_APPLIED',
+        description=f'Payment outcome {result.status} applied to case.',
+        metadata={'result_id': str(result.id), 'status': result.status},
+    )
 
 
 def _build_ai_context(case, payment_entity, policy):

@@ -60,3 +60,32 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"Subscription {self.razorpay_subscription_id} - {self.status}"
+
+
+class PaymentEvent(models.Model):
+    """Persisted gateway event envelope used for signature and replay safety."""
+
+    RECEIVED = 'RECEIVED'
+    PROCESSED = 'PROCESSED'
+    FAILED = 'FAILED'
+    STATUS_CHOICES = (
+        (RECEIVED, 'Received'),
+        (PROCESSED, 'Processed'),
+        (FAILED, 'Failed'),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event_id = models.CharField(max_length=255, unique=True)
+    event_type = models.CharField(max_length=100)
+    payload = models.JSONField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=RECEIVED)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['event_type', 'status'])]
+
+    def __str__(self):
+        return f"{self.event_type} ({self.event_id})"

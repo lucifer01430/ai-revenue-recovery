@@ -18,14 +18,14 @@
             <ul class="nav flex-column mb-auto">
                 <li class="nav-item"><a href="{% url 'recovery:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><i class="bi bi-grid-1x2 me-2"></i><span>Overview</span></a></li>
                 <li class="nav-item"><a href="{% url 'recovery:case_list' %}" class="nav-link {% if request.resolver_match.url_name == 'case_list' %}active{% endif %}"><i class="bi bi-briefcase me-2"></i><span>Recovery cases</span></a></li>
-                <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-gear me-2"></i><span>Settings</span></a></li>
+                <li class="nav-item"><a href="{% url 'merchant_profile' %}" class="nav-link {% if request.resolver_match.url_name == 'merchant_profile' %}active{% endif %}"><i class="bi bi-gear me-2"></i><span>Settings</span></a></li>
             </ul>
             <div class="sidebar-footer">Razorpay test environment</div>
         </aside>
         <main class="flex-grow-1 app-main">
             <div class="topbar d-flex justify-content-between align-items-center">
                 <div><div class="page-eyebrow">Revenue operations</div><h1 class="m-0 page-heading">{% block page_title %}Overview{% endblock %}</h1></div>
-                <div class="d-flex align-items-center"><div class="text-end me-3"><div class="fw-bold fs-6">Demo Merchant</div><div class="text-muted" style="font-size: .76rem;">Test environment</div></div><div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">DM</div></div>
+                <div class="d-flex align-items-center"><div class="text-end me-3"><div class="fw-bold fs-6">{{ merchant.name|default:'Merchant workspace' }}</div><div class="text-muted" style="font-size: .76rem;">{{ request.user.email|default:request.user.username }}</div></div><form method="post" action="{% url 'logout' %}" class="me-2">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-secondary">Sign out</button></form><div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px;">{{ request.user.username|slice:':2'|upper }}</div></div>
             </div>
             <div class="container-fluid content-wrap">{% block content %}{% endblock %}</div>
         </main>

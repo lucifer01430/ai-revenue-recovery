@@ -1,4 +1,6 @@
 from django.test import TestCase
+from django.contrib.auth import get_user_model
+from django.conf import settings
 from apps.recovery.services import execute_action, process_failed_payment
 from apps.recovery.models import RecoveryCase
 from apps.recovery.models import (
@@ -10,6 +12,7 @@ from apps.recovery.models import (
     RecoveryResult,
 )
 from apps.audit.models import AuditLog
+from apps.merchants.models import Merchant
 
 
 class FailingProvider:
@@ -18,6 +21,28 @@ class FailingProvider:
 
 
 class RecoveryFlowTestCase(TestCase):
+    def test_dashboard_uses_persisted_outcomes(self):
+        user = get_user_model().objects.create_user(username='dashboard_owner', password='safe-pass-123')
+        Merchant.objects.create(
+            owner=user, name='Demo Merchant', email='owner@example.com',
+            razorpay_key_id=settings.RAZORPAY_KEY_ID,
+            razorpay_key_secret=settings.RAZORPAY_KEY_SECRET,
+        )
+        process_failed_payment({
+            'id': 'pay_dashboard_metrics',
+            'amount': 25000,
+            'currency': 'INR',
+            'error_code': 'BAD_REQUEST_ERROR',
+            'error_description': 'Payment failed due to insufficient funds',
+        })
+        self.client.force_login(user)
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['revenue_at_risk'], 250.0)
+        self.assertEqual(response.context['revenue_recovered'], 250.0)
+        self.assertEqual(response.context['successful_recoveries'], 1)
+        self.assertEqual(response.context['open_cases'], 0)
+
     def test_end_to_end_recovery_flow(self):
         # 1. Simulate webhook payload for failed payment
         mock_payment_entity = {
@@ -57,13 +82,14 @@ class RecoveryFlowTestCase(TestCase):
         
         # Check Audit Logs
         logs = AuditLog.objects.filter(recovery_case_id=case.id).order_by('created_at')
-        self.assertEqual(logs.count(), 4)
+        self.assertEqual(logs.count(), 5)
         
         event_types = [log.event_type for log in logs]
         self.assertEqual(event_types, [
             'CASE_CREATED',
             'AI_DIAGNOSED',
             'GUARDRAIL_EVALUATED',
+            'PAYMENT_OUTCOME_APPLIED',
             'ACTION_EXECUTED'
         ])
         
