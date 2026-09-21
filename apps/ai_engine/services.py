@@ -1,4 +1,9 @@
-from typing import Any, Mapping, Protocol
+import json
+import urllib.error
+import urllib.request
+from typing import Any, Callable, Mapping, Protocol
+
+from django.conf import settings
 
 from apps.recovery.models import (
     ConfidenceChoices,
@@ -67,6 +72,79 @@ class LocalMockProvider:
         }
 
 
+class OpenAIProvider:
+    """Small OpenAI-compatible adapter; it only returns advisory JSON."""
+
+    def __init__(self, api_key=None, model=None, base_url=None, http_post: Callable | None = None):
+        self.api_key = api_key or getattr(settings, 'AI_API_KEY', '')
+        self.model = model or getattr(settings, 'AI_MODEL', 'gpt-4o')
+        self.base_url = base_url or getattr(settings, 'AI_BASE_URL', 'https://api.openai.com/v1/chat/completions')
+        self.http_post = http_post or self._http_post
+
+    def analyze(self, context: Mapping[str, Any]) -> Mapping[str, Any]:
+        if not self.api_key or self.api_key.startswith('your_') or self.api_key.startswith('placeholder'):
+            raise AIProviderError('AI provider credentials are not configured')
+        prompt = (
+            'Return only a JSON object matching the documented recovery decision schema. '
+            'Allowed failure_category values: INSUFFICIENT_FUNDS, CARD_EXPIRED, BANK_DECLINED, '
+            'NETWORK_ERROR, PAYMENT_METHOD_INVALID, CUSTOMER_INITIATED_FAILURE, UNKNOWN. '
+            'Allowed recommended_action values: RETRY_PAYMENT, SEND_PAYMENT_LINK, SEND_REMINDER, '
+            'SCHEDULE_RETRY, ESCALATE_TO_HUMAN, STOP_RECOVERY. '
+            'Allowed confidence values: LOW, MEDIUM, HIGH. '
+            'Allowed suggested_timing values: IMMEDIATE, AFTER_24H, AFTER_48H, NOT_APPLICABLE. '
+            'reasoning_summary must be plain language and at most 200 characters.\n\n'
+            f'Context JSON:\n{json.dumps(context, separators=(",", ":"), default=str)}'
+        )
+        request_body = {
+            'model': self.model,
+            'temperature': getattr(settings, 'AI_TEMPERATURE', 0.0),
+            'max_tokens': getattr(settings, 'AI_MAX_TOKENS', 1024),
+            'messages': [
+                {'role': 'system', 'content': 'You are a bounded payment recovery decision service.'},
+                {'role': 'user', 'content': prompt},
+            ],
+        }
+        try:
+            response = self.http_post(request_body)
+            content = response.get('choices', [{}])[0].get('message', {}).get('content', response)
+            if isinstance(content, str):
+                content = content.strip()
+                if content.startswith('```'):
+                    content = content.strip('`')
+                    if content.startswith('json'):
+                        content = content[4:].strip()
+                content = json.loads(content)
+            if not isinstance(content, Mapping):
+                raise AIOutputValidationError('LLM content must be a JSON object')
+            return content
+        except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError) as exc:
+            raise AIProviderError('External AI provider request failed') from exc
+
+    def _http_post(self, request_body):
+        request = urllib.request.Request(
+            self.base_url,
+            data=json.dumps(request_body).encode('utf-8'),
+            headers={
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json',
+            },
+            method='POST',
+        )
+        with urllib.request.urlopen(request, timeout=15) as response:
+            if response.status >= 400:
+                raise AIProviderError('External AI provider returned an error')
+            return json.loads(response.read().decode('utf-8'))
+
+
+def configured_provider() -> AIProvider:
+    """Select a configured external adapter, otherwise stay local."""
+    provider_name = getattr(settings, 'AI_PROVIDER', 'local').lower()
+    api_key = getattr(settings, 'AI_API_KEY', '')
+    if provider_name == 'openai' and api_key and not api_key.startswith(('your_', 'placeholder')):
+        return OpenAIProvider()
+    return LocalMockProvider()
+
+
 class AIDecisionEngine:
     """Validates provider output and applies the documented safe fallback."""
 
@@ -79,7 +157,7 @@ class AIDecisionEngine:
     }
 
     def __init__(self, provider: AIProvider | None = None):
-        self.provider = provider or LocalMockProvider()
+        self.provider = provider or configured_provider()
 
     def decide(self, context: Mapping[str, Any]) -> dict[str, Any]:
         try:

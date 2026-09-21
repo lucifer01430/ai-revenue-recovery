@@ -28,6 +28,16 @@ ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=[])
 RAZORPAY_KEY_ID = env('RAZORPAY_KEY_ID', default='rzp_test_placeholder')
 RAZORPAY_KEY_SECRET = env('RAZORPAY_KEY_SECRET', default='placeholder_secret')
 RAZORPAY_WEBHOOK_SECRET = env('RAZORPAY_WEBHOOK_SECRET', default='placeholder_webhook_secret')
+RAZORPAY_API_BASE_URL = env('RAZORPAY_API_BASE_URL', default='https://api.razorpay.com/v1')
+
+# Provider-agnostic AI configuration. LocalMockProvider is used when these are
+# not configured with usable credentials.
+AI_PROVIDER = env('AI_PROVIDER', default='local')
+AI_API_KEY = env('AI_API_KEY', default='')
+AI_MODEL = env('AI_MODEL', default='gpt-4o')
+AI_MAX_TOKENS = env.int('AI_MAX_TOKENS', default=1024)
+AI_TEMPERATURE = env.float('AI_TEMPERATURE', default=0.0)
+AI_BASE_URL = env('AI_BASE_URL', default='https://api.openai.com/v1/chat/completions')
 
 # Application definition
 

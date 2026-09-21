@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from .services import AIDecisionEngine, AIProviderError, diagnose_and_recommend
+from .services import AIDecisionEngine, AIProviderError, OpenAIProvider, diagnose_and_recommend
 
 
 class ValidProvider:
@@ -25,6 +25,15 @@ class FailingProvider:
 
 
 class AIDecisionEngineTests(SimpleTestCase):
+    def test_external_provider_success_uses_mocked_response(self):
+        provider = OpenAIProvider(
+            api_key='test-key',
+            http_post=lambda body: {'choices': [{'message': {'content': '{"failure_category":"NETWORK_ERROR","recommended_action":"RETRY_PAYMENT","confidence":"HIGH","suggested_timing":"IMMEDIATE","reasoning_summary":"Transient issue detected."}'}}]},
+        )
+        response = AIDecisionEngine(provider).decide({'case_id': 'case-1'})
+        self.assertEqual(response['recommended_action'], 'RETRY_PAYMENT')
+        self.assertFalse(response['used_fallback'])
+
     def test_valid_structured_provider_output_is_returned(self):
         response = diagnose_and_recommend({}, provider=ValidProvider())
 

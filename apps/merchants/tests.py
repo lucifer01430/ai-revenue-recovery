@@ -81,3 +81,14 @@ class MerchantAuthAndIsolationTests(TestCase):
 
         dashboard = self.client.get(reverse('recovery:dashboard'))
         self.assertEqual(dashboard.context['total_cases'], 1)
+
+    def test_recovery_case_detail_renders_workflow(self):
+        user = self.make_user('workflow_owner')
+        merchant = self.make_merchant(user, 'Workflow Business')
+        case = self.make_case(merchant, 'workflow')
+        self.client.force_login(user)
+        response = self.client.get(reverse('recovery:case_detail', kwargs={'case_id': case.id}))
+        self.assertEqual(response.status_code, 200)
+        for step in ('Detect', 'Diagnose', 'Decide', 'Guard', 'Act', 'Recover', 'Measure', 'Audit'):
+            self.assertContains(response, step)
+        self.assertContains(response, 'pay_workflow')

@@ -8,6 +8,10 @@ from django.test import Client, TestCase
 from apps.payments.models import Payment, PaymentEvent
 from apps.recovery.models import RecoveryAction, RecoveryCase, RecoveryResult
 from apps.recovery.services import process_failed_payment, record_recovery_outcome
+from apps.merchants.models import Merchant
+from apps.customers.models import Customer
+from apps.payments.services import RazorpayAdapter
+from apps.recovery.models import AuthorizationChoices
 
 
 class PaymentWebhookTestCase(TestCase):
@@ -82,3 +86,33 @@ class PaymentWebhookTestCase(TestCase):
         self.assertFalse(changed_again)
         self.assertEqual(result.id, duplicate.id)
         self.assertEqual(RecoveryCase.objects.get(id=action.recovery_case_id).status, 'FAILED')
+
+    def test_razorpay_test_mode_adapter_uses_mocked_api_response(self):
+        merchant = Merchant.objects.create(
+            name='Test Mode Merchant', email='test@example.com',
+            razorpay_key_id='rzp_test_123', razorpay_key_secret='secret',
+        )
+        customer = Customer.objects.create(
+            merchant=merchant, razorpay_customer_id='cust_adapter',
+            name='Adapter Customer', email='customer@example.com',
+        )
+        payment = Payment.objects.create(
+            merchant=merchant, customer=customer, razorpay_payment_id='pay_adapter',
+            amount_paise=5000, currency='INR', status='failed',
+        )
+        case = RecoveryCase.objects.create(payment=payment, status='ACTION_PENDING')
+        action = RecoveryAction.objects.create(
+            recovery_case=case, action_type='SEND_PAYMENT_LINK',
+            authorization_status=AuthorizationChoices.APPROVED,
+        )
+        calls = []
+
+        def fake_post(path, payload, idempotency_key):
+            calls.append((path, payload, idempotency_key))
+            return {'id': 'plink_test_123', 'status': 'created'}
+
+        response = RazorpayAdapter(merchant, http_post=fake_post).create_payment_link(action)
+        self.assertEqual(response['id'], 'plink_test_123')
+        self.assertEqual(calls[0][0], '/payment_links')
+        self.assertEqual(calls[0][1]['reference_id'], str(action.id))
+        self.assertIn(str(action.id), calls[0][2])

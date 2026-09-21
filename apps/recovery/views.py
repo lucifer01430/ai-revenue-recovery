@@ -60,7 +60,7 @@ def case_list(request):
         return redirect('merchant_setup')
     cases = RecoveryCase.objects.filter(payment__merchant=merchant).select_related(
         'payment', 'payment__customer'
-    ).order_by('-created_at')
+    ).prefetch_related('ai_diagnoses').order_by('-created_at')
     return render(request, 'recovery/case_list.html', {'cases': cases, 'merchant': merchant})
 
 @login_required
@@ -70,14 +70,27 @@ def case_detail(request, case_id):
         from django.shortcuts import redirect
         return redirect('merchant_setup')
     case = get_object_or_404(
-        RecoveryCase.objects.select_related('payment', 'payment__customer'),
+        RecoveryCase.objects.select_related('payment', 'payment__customer').prefetch_related(
+            'ai_diagnoses', 'ai_diagnoses__recommendations',
+            'guardrail_interventions', 'recovery_actions', 'recovery_results',
+        ),
         id=case_id,
         payment__merchant=merchant,
     )
     audit_logs = AuditLog.objects.filter(recovery_case_id=case.id).order_by('created_at')
+    diagnosis = case.ai_diagnoses.all().first()
+    recommendation = diagnosis.recommendations.all().first() if diagnosis else None
+    guardrail = case.guardrail_interventions.all().first()
+    action = case.recovery_actions.all().first()
+    result = case.recovery_results.all().first()
     
     return render(request, 'recovery/case_detail.html', {
         'case': case,
         'audit_logs': audit_logs,
         'merchant': merchant,
+        'diagnosis': diagnosis,
+        'recommendation': recommendation,
+        'guardrail': guardrail,
+        'action': action,
+        'result': result,
     })

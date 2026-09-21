@@ -163,6 +163,21 @@ def execute_action(case, recovery_action):
         return False
 
     action = recovery_action.action_type
+    try:
+        from apps.payments.services import execute_gateway_action
+        gateway_response = execute_gateway_action(recovery_action)
+    except Exception as exc:
+        recovery_action.execution_status = ExecutionChoices.FAILED
+        recovery_action.save(update_fields=['execution_status', 'updated_at'])
+        _record_result(case, recovery_action, ResultChoices.FAILED)
+        AuditLog.objects.create(
+            recovery_case_id=case.id,
+            event_type='ACTION_FAILED',
+            description='Gateway action failed safely before an outcome was recorded.',
+            metadata={'action': action, 'error': str(exc)},
+        )
+        return False
+
     recovery_action.execution_status = ExecutionChoices.EXECUTED
     recovery_action.executed_at = timezone.now()
     recovery_action.save(update_fields=['execution_status', 'executed_at', 'updated_at'])
@@ -170,7 +185,7 @@ def execute_action(case, recovery_action):
     if action == RecoveryActionChoices.RETRY_PAYMENT:
         case.retries_attempted += 1
         description = "Mocking a payment retry to Razorpay."
-        if case.retries_attempted == 1:
+        if case.retries_attempted == 1 and gateway_response.get('simulated'):
             _record_result(case, recovery_action, ResultChoices.RECOVERED, case.payment.amount_paise)
             description += " Simulated payment outcome was SUCCESSFUL."
         else:
