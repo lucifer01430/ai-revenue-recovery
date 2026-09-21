@@ -36,7 +36,7 @@ class RecoveryFlowTestCase(TestCase):
             'error_description': 'Payment failed due to insufficient funds',
         })
         self.client.force_login(user)
-        response = self.client.get('/')
+        response = self.client.get('/app/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['revenue_at_risk'], 250.0)
         self.assertEqual(response.context['revenue_recovered'], 250.0)
